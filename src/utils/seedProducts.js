@@ -342,14 +342,27 @@ async function seed() {
     console.log(`[Seed] Successfully seeded ${initialCategories.length} categories.`);
 
     // Seed Products
+    let inserted = 0;
+    let updated = 0;
     for (const p of productsToSeed) {
+      const existing = await Product.findOne({ slug: p.slug }, { _id: 1 });
       await Product.findOneAndUpdate(
         { slug: p.slug },
         p,
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
+      if (existing) {
+        updated += 1;
+        console.log(`  ↻ Updated: ${p.name} (${p.sku})`);
+      } else {
+        inserted += 1;
+        console.log(`  + Inserted: ${p.name} (${p.sku})`);
+      }
     }
 
+    console.log('');
+    console.log(`Products seeded successfully`);
+    console.log(`Seeded: ${inserted + updated} products (${inserted} new, ${updated} updated)`);
     console.log(`[Seed] Successfully seeded ${productsToSeed.length} products with SKUs and stock metrics.`);
     process.exit(0);
   } catch (err) {
