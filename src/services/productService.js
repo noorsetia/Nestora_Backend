@@ -184,6 +184,10 @@ const productService = {
 
   // Query, filter, sort, paginate products
   getProducts: async (queryParams = {}, isAdmin = false) => {
+    const escapeRegex = (str) => {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    };
+
     // If DB is connected, use Mongoose query
     if (Product.db.readyState === 1) {
       try {
@@ -205,80 +209,114 @@ const productService = {
           limit = 12,
         } = queryParams;
 
-        const filter = {};
+        const andConditions = [];
 
         if (!isAdmin) {
-          filter.isActive = true;
-          filter.status = 'active';
+          andConditions.push({ isActive: true, status: 'active' });
         } else if (status) {
-          filter.status = status;
-          if (status === 'active') filter.isActive = true;
-          if (status === 'inactive') filter.isActive = false;
+          if (status === 'active') andConditions.push({ status: 'active', isActive: true });
+          else if (status === 'inactive') andConditions.push({ status: 'inactive', isActive: false });
+          else andConditions.push({ status });
         }
 
-        if (category) {
-          filter.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
+        if (category && category !== 'all') {
+          const catClean = category.trim();
+          let catPattern = escapeRegex(catClean).replace(/-/g, '[ -]');
+          if (catClean.toLowerCase() === 'decor' || catClean.toLowerCase() === 'decor-and-objects') {
+            catPattern = 'decor|objects|accessories|vases|clocks|lighting|rugs|decorations';
+          }
+          const catRegex = new RegExp(catPattern, 'i');
+          andConditions.push({
+            $or: [
+              { category: catRegex },
+              { subcategory: catRegex },
+              { name: catRegex },
+              { description: catRegex },
+            ],
+          });
         }
 
-        if (room) {
+        if (room && room !== 'all') {
           const roomClean = room.trim();
-          filter.$or = filter.$or || [];
-          filter.$or.push(
-            { room: { $regex: new RegExp(roomClean, 'i') } },
-            { rooms: { $elemMatch: { $regex: new RegExp(roomClean, 'i') } } }
-          );
+          let roomPattern = escapeRegex(roomClean).replace(/-/g, '[ -]');
+          if (roomClean.toLowerCase() === 'home-office' || roomClean.toLowerCase() === 'workspace') {
+            roomPattern = 'home[- ]office|workspace|office';
+          }
+          const roomRegex = new RegExp(roomPattern, 'i');
+          andConditions.push({
+            $or: [
+              { room: roomRegex },
+              { rooms: roomRegex },
+            ],
+          });
         }
 
-        if (style) {
+        if (style && style !== 'all') {
           const styleClean = style.trim();
-          filter.styles = { $elemMatch: { $regex: new RegExp(styleClean, 'i') } };
+          const stylePattern = escapeRegex(styleClean).replace(/-/g, '[ -]');
+          const styleRegex = new RegExp(stylePattern, 'i');
+          andConditions.push({
+            $or: [
+              { style: styleRegex },
+              { styles: styleRegex },
+            ],
+          });
         }
 
-        if (brand) {
-          filter.brand = { $regex: new RegExp(`^${brand.trim()}$`, 'i') };
+        if (brand && brand !== 'all') {
+          const brandClean = brand.trim();
+          const brandPattern = escapeRegex(brandClean).replace(/&/g, '(&|and)').replace(/-/g, '[ -]');
+          const brandRegex = new RegExp('^' + brandPattern + '$', 'i');
+          andConditions.push({ brand: brandRegex });
         }
 
-        if (minPrice || maxPrice) {
-          filter.price = {};
-          if (minPrice) filter.price.$gte = Number(minPrice);
-          if (maxPrice) filter.price.$lte = Number(maxPrice);
+        if (minPrice !== undefined && minPrice !== null && minPrice !== '' && !isNaN(Number(minPrice)) && Number(minPrice) > 0) {
+          andConditions.push({ price: { $gte: Number(minPrice) } });
+        }
+        if (maxPrice !== undefined && maxPrice !== null && maxPrice !== '' && !isNaN(Number(maxPrice)) && Number(maxPrice) < 200000) {
+          andConditions.push({ price: { $lte: Number(maxPrice) } });
         }
 
-        if (rating) {
-          filter.rating = { $gte: Number(rating) };
+        if (rating !== undefined && rating !== null && rating !== '' && !isNaN(Number(rating)) && Number(rating) > 0) {
+          const rNum = Number(rating);
+          andConditions.push({
+            $or: [
+              { rating: { $gte: rNum } },
+              { rating: { $exists: false } },
+              { rating: null },
+            ],
+          });
         }
 
         if (inStock === 'true' || inStock === true) {
-          filter.stock = { $gt: 0 };
-          filter.inStock = true;
+          andConditions.push({ stock: { $gt: 0 } });
         }
 
         if (isFeatured === 'true' || isFeatured === true) {
-          filter.isFeatured = true;
+          andConditions.push({ isFeatured: true });
         }
 
         if (isNewArrival === 'true' || isNewArrival === true) {
-          filter.isNewArrival = true;
+          andConditions.push({ isNewArrival: true });
         }
 
         if (search && search.trim()) {
-          const searchRegex = new RegExp(search.trim(), 'i');
-          const searchConditions = [
-            { name: searchRegex },
-            { brand: searchRegex },
-            { category: searchRegex },
-            { style: searchRegex },
-            { description: searchRegex },
-            { sku: searchRegex },
-          ];
-
-          if (filter.$or) {
-            filter.$and = [{ $or: filter.$or }, { $or: searchConditions }];
-            delete filter.$or;
-          } else {
-            filter.$or = searchConditions;
-          }
+          const sPattern = escapeRegex(search.trim());
+          const searchRegex = new RegExp(sPattern, 'i');
+          andConditions.push({
+            $or: [
+              { name: searchRegex },
+              { brand: searchRegex },
+              { category: searchRegex },
+              { subcategory: searchRegex },
+              { style: searchRegex },
+              { description: searchRegex },
+              { sku: searchRegex },
+            ],
+          });
         }
+
+        const filter = andConditions.length > 0 ? { $and: andConditions } : {};
 
         let sortOptions = {};
         switch (sort) {
@@ -340,30 +378,65 @@ const productService = {
       result = result.filter((p) => p.status === queryParams.status);
     }
 
-    if (queryParams.category) {
-      const catLower = queryParams.category.toLowerCase().trim();
-      result = result.filter((p) => (p.category || '').toLowerCase() === catLower);
+    if (queryParams.category && queryParams.category !== 'all') {
+      const catClean = queryParams.category.toLowerCase().trim();
+      result = result.filter((p) => {
+        const cat = (p.category || '').toLowerCase();
+        const sub = (p.subcategory || '').toLowerCase();
+        const name = (p.name || '').toLowerCase();
+        const desc = (p.description || '').toLowerCase();
+        if (catClean === 'decor' || catClean === 'decor-and-objects') {
+          return cat.includes('decor') || sub.includes('decor') || cat.includes('lighting') || cat.includes('rugs') || name.includes('decor') || desc.includes('decor');
+        }
+        const searchCat = catClean.replace(/-/g, ' ');
+        return cat.includes(searchCat) || sub.includes(searchCat) || searchCat.includes(cat) || searchCat.includes(sub);
+      });
     }
 
-    if (queryParams.room) {
-      const roomLower = queryParams.room.toLowerCase().trim();
-      result = result.filter((p) =>
-        (p.rooms || []).some((r) => r.toLowerCase().includes(roomLower))
-      );
+    if (queryParams.room && queryParams.room !== 'all') {
+      const roomClean = queryParams.room.toLowerCase().trim();
+      result = result.filter((p) => {
+        const mainRoom = (p.room || '').toLowerCase();
+        const roomsArr = (p.rooms || []).map((r) => r.toLowerCase());
+        if (roomClean === 'home-office' || roomClean === 'workspace') {
+          return mainRoom.includes('home-office') || mainRoom.includes('workspace') || roomsArr.some(r => r.includes('workspace') || r.includes('home office') || r.includes('home-office'));
+        }
+        const searchRoom = roomClean.replace(/-/g, ' ');
+        return mainRoom.includes(searchRoom) || roomsArr.some(r => r.includes(searchRoom) || searchRoom.includes(r));
+      });
     }
 
-    if (queryParams.style) {
-      const styleLower = queryParams.style.toLowerCase().trim();
-      result = result.filter((p) =>
-        (p.styles || []).some((s) => s.toLowerCase().includes(styleLower))
-      );
+    if (queryParams.style && queryParams.style !== 'all') {
+      const styleClean = queryParams.style.toLowerCase().trim();
+      result = result.filter((p) => {
+        const mainStyle = (p.style || '').toLowerCase();
+        const stylesArr = (p.styles || []).map((s) => s.toLowerCase());
+        const searchStyle = styleClean.replace(/-/g, ' ');
+        return mainStyle.includes(searchStyle) || stylesArr.some(s => s.toLowerCase().includes(searchStyle));
+      });
     }
 
-    if (queryParams.minPrice) {
+    if (queryParams.brand && queryParams.brand !== 'all') {
+      const brandClean = queryParams.brand.toLowerCase().trim();
+      result = result.filter((p) => {
+        const b = (p.brand || '').toLowerCase();
+        return b === brandClean || b.replace(/&/g, 'and') === brandClean.replace(/&/g, 'and');
+      });
+    }
+
+    if (queryParams.minPrice && !isNaN(Number(queryParams.minPrice)) && Number(queryParams.minPrice) > 0) {
       result = result.filter((p) => p.price >= Number(queryParams.minPrice));
     }
-    if (queryParams.maxPrice) {
+    if (queryParams.maxPrice && !isNaN(Number(queryParams.maxPrice)) && Number(queryParams.maxPrice) < 200000) {
       result = result.filter((p) => p.price <= Number(queryParams.maxPrice));
+    }
+
+    if (queryParams.rating && !isNaN(Number(queryParams.rating)) && Number(queryParams.rating) > 0) {
+      result = result.filter((p) => (p.rating || 4.8) >= Number(queryParams.rating));
+    }
+
+    if (queryParams.inStock === 'true' || queryParams.inStock === true) {
+      result = result.filter((p) => p.stock > 0);
     }
 
     if (queryParams.isFeatured === 'true' || queryParams.isFeatured === true) {
@@ -380,6 +453,7 @@ const productService = {
           (p.name && p.name.toLowerCase().includes(q)) ||
           (p.brand && p.brand.toLowerCase().includes(q)) ||
           (p.category && p.category.toLowerCase().includes(q)) ||
+          (p.subcategory && p.subcategory.toLowerCase().includes(q)) ||
           (p.description && p.description.toLowerCase().includes(q)) ||
           (p.sku && p.sku.toLowerCase().includes(q))
       );
