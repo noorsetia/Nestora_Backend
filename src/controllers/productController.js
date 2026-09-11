@@ -1,5 +1,6 @@
 const productService = require('../services/productService');
 const { validateProductPayload } = require('../validators/productValidator');
+const cloudinaryService = require('../services/cloudinaryService');
 
 const productController = {
   // GET /api/products
@@ -134,6 +135,48 @@ const productController = {
         message: `Product status changed to ${status}`,
         data: { product },
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  // POST /api/products/upload (Admin)
+  uploadProductImage: async (req, res, next) => {
+    try {
+      if (!req.file && (!req.files || req.files.length === 0)) {
+        return res.status(400).json({
+          success: false,
+          message: 'No image file uploaded. Please attach an image file (JPG, JPEG, PNG, or WEBP).',
+        });
+      }
+
+      if (req.file) {
+        const result = await cloudinaryService.uploadToCloudinary(req.file.buffer, 'nestora/products');
+        return res.status(200).json({
+          success: true,
+          message: 'Image uploaded successfully to Cloudinary',
+          data: {
+            url: result.url,
+            public_id: result.public_id,
+            format: result.format,
+            width: result.width,
+            height: result.height,
+          },
+        });
+      }
+
+      if (req.files && req.files.length > 0) {
+        const uploadPromises = req.files.map((file) => cloudinaryService.uploadToCloudinary(file.buffer, 'nestora/products'));
+        const results = await Promise.all(uploadPromises);
+        return res.status(200).json({
+          success: true,
+          message: 'Images uploaded successfully to Cloudinary',
+          data: {
+            urls: results.map((r) => r.url),
+            images: results,
+          },
+        });
+      }
     } catch (err) {
       next(err);
     }

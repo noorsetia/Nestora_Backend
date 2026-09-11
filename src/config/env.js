@@ -30,6 +30,9 @@ const config = {
   frontendUrl: process.env.CLIENT_URL || process.env.FRONTEND_URL || 'http://localhost:5173',
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_nestora_dummy_id',
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || 'dummy_razorpay_secret_key_123456789',
+  cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME || '',
+  cloudinaryApiKey: process.env.CLOUDINARY_API_KEY || '',
+  cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET || '',
 };
 
 // Safe diagnostic logging function

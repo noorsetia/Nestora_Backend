@@ -36,11 +36,11 @@ const memoryProducts = [
     rooms: ['Living Room', 'Bedroom'],
     styles: ['Minimal', 'Modern'],
     badge: 'Bestseller',
-    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80',
-    hoverImage: 'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=1200&q=80',
+    image: '/images/products/linen-lounge-chair.jpg',
+    hoverImage: '/images/products/linen-lounge-chair-hover.jpg',
     images: [
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1567538096630-e0c55bd6374c?auto=format&fit=crop&w=1200&q=80',
+      '/images/products/linen-lounge-chair.jpg',
+      '/images/products/linen-lounge-chair-hover.jpg',
     ],
     description: 'Expertly crafted with a solid ash wood frame and upholstered in premium organic Belgian linen.',
     stock: 15,
@@ -68,10 +68,11 @@ const memoryProducts = [
     rooms: ['Living Room'],
     styles: ['Minimal', 'Scandinavian'],
     badge: "Editor's Pick",
-    image: 'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=1200&q=80',
-    hoverImage: 'https://images.unsplash.com/photo-1532323544230-7191fd51bc1b?auto=format&fit=crop&w=1200&q=80',
+    image: '/images/products/oak-coffee-table.jpg',
+    hoverImage: '/images/products/oak-coffee-table-hover.jpg',
     images: [
-      'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=1200&q=80',
+      '/images/products/oak-coffee-table.jpg',
+      '/images/products/oak-coffee-table-hover.jpg',
     ],
     description: 'Carved from sustainably harvested European white oak with soft rounded edges.',
     stock: 12,
@@ -99,10 +100,11 @@ const memoryProducts = [
     rooms: ['Living Room', 'Bedroom'],
     styles: ['Japandi', 'Modern'],
     badge: 'New Season',
-    image: 'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=1200&q=80',
-    hoverImage: 'https://images.unsplash.com/photo-1580481072645-022f9a6d8310?auto=format&fit=crop&w=1200&q=80',
+    image: '/images/products/boucle-accent-chair.jpg',
+    hoverImage: '/images/products/boucle-accent-chair-hover.jpg',
     images: [
-      'https://images.unsplash.com/photo-1598300042247-d088f8ab3a91?auto=format&fit=crop&w=1200&q=80',
+      '/images/products/boucle-accent-chair.jpg',
+      '/images/products/boucle-accent-chair-hover.jpg',
     ],
     description: 'An organic silhouette wrapped in tactile cream bouclé fabric.',
     stock: 3,
@@ -130,10 +132,11 @@ const memoryProducts = [
     rooms: ['Workspace', 'Living Room'],
     styles: ['Minimal'],
     badge: null,
-    image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=1200&q=80',
-    hoverImage: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=1200&q=80',
+    image: '/images/products/minimal-floor-lamp.jpg',
+    hoverImage: '/images/products/minimal-floor-lamp-hover.jpg',
     images: [
-      'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=1200&q=80',
+      '/images/products/minimal-floor-lamp.jpg',
+      '/images/products/minimal-floor-lamp-hover.jpg',
     ],
     description: 'A slender matte brass floor lamp featuring an adjustable linen shade.',
     stock: 20,
@@ -161,10 +164,11 @@ const memoryProducts = [
     rooms: ['Living Room'],
     styles: ['Modern', 'Contemporary'],
     badge: 'Flagship Piece',
-    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80',
-    hoverImage: 'https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?auto=format&fit=crop&w=1200&q=80',
+    image: '/images/products/modern-lounge-sofa.jpg',
+    hoverImage: '/images/products/modern-lounge-sofa-hover.jpg',
     images: [
-      'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1200&q=80',
+      '/images/products/modern-lounge-sofa.jpg',
+      '/images/products/modern-lounge-sofa-hover.jpg',
     ],
     description: 'Generous 3-seater modular sofa with plush down-blend filled cushions.',
     stock: 5,
@@ -221,7 +225,7 @@ const productService = {
 
         if (category && category !== 'all') {
           const catClean = category.trim();
-          let catPattern = escapeRegex(catClean).replace(/-/g, '[ -]');
+          let catPattern = escapeRegex(catClean).replace(/-/g, '[ -]').replace(/&/g, '(&|and)');
           if (catClean.toLowerCase() === 'decor' || catClean.toLowerCase() === 'decor-and-objects') {
             catPattern = 'decor|objects|accessories|vases|clocks|lighting|rugs|decorations';
           }
@@ -321,7 +325,7 @@ const productService = {
         let sortOptions = {};
         switch (sort) {
           case 'newest':
-            sortOptions = { createdAt: -1 };
+            sortOptions = { createdAt: -1, _id: 1 };
             break;
           case 'price_low':
             sortOptions = { price: 1 };
@@ -340,7 +344,7 @@ const productService = {
             break;
           case 'recommended':
           default:
-            sortOptions = { isFeatured: -1, createdAt: -1 };
+            sortOptions = { isFeatured: -1, createdAt: -1, _id: 1 };
             break;
         }
 
@@ -388,8 +392,9 @@ const productService = {
         if (catClean === 'decor' || catClean === 'decor-and-objects') {
           return cat.includes('decor') || sub.includes('decor') || cat.includes('lighting') || cat.includes('rugs') || name.includes('decor') || desc.includes('decor');
         }
-        const searchCat = catClean.replace(/-/g, ' ');
-        return cat.includes(searchCat) || sub.includes(searchCat) || searchCat.includes(cat) || searchCat.includes(sub);
+        const searchCat = catClean.replace(/-/g, ' ').replace(/&/g, '|').replace(/and/g, '|');
+        const terms = searchCat.split('|').filter(Boolean);
+        return terms.some(term => cat.includes(term) || sub.includes(term) || name.includes(term) || desc.includes(term));
       });
     }
 

@@ -40,6 +40,18 @@ const errorHandler = (err, req, res, next) => {
     errorCode = 'TOKEN_EXPIRED';
   }
 
+  // Handle Multer upload errors
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    statusCode = 400;
+    message = 'File size limit exceeded. Maximum allowed file size is 5MB.';
+    errorCode = 'FILE_TOO_LARGE';
+  }
+  if (err.code === 'INVALID_FILE_TYPE') {
+    statusCode = 400;
+    message = err.message || 'Invalid file type. Only JPG, JPEG, PNG, and WEBP images are allowed.';
+    errorCode = 'INVALID_FILE_TYPE';
+  }
+
   // Production error masking for unhandled server errors (500)
   if (env.nodeEnv === 'production' && statusCode === 500) {
     message = 'An unexpected error occurred. Please try again later.';

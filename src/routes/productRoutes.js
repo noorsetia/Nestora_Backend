@@ -3,6 +3,7 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const { protect } = require('../middleware/authMiddleware');
 const { requireRole } = require('../middleware/roleMiddleware');
+const upload = require('../middleware/uploadMiddleware');
 
 // Public catalog routes
 router.get('/', productController.getProducts);
@@ -11,6 +12,7 @@ router.get('/new-arrivals', productController.getNewArrivals);
 router.get('/:slug', productController.getProductBySlug);
 
 // Admin-only mutation routes
+router.post('/upload', protect, requireRole('admin', 'superadmin'), upload.single('image'), productController.uploadProductImage);
 router.post('/', protect, requireRole('admin', 'superadmin'), productController.createProduct);
 router.put('/:id', protect, requireRole('admin', 'superadmin'), productController.updateProduct);
 router.patch('/:id/status', protect, requireRole('admin', 'superadmin'), productController.updateStatus);
